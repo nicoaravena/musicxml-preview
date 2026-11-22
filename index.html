@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>MusicXML Editor</title>
   <!-- OpenSheetMusicDisplayのCDN -->
-  <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.6.1/build/opensheetmusicdisplay.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@3.0.0/build/opensheetmusicdisplay.min.js"></script>
   <style>
     body {
       display: flex;
@@ -107,28 +107,24 @@
     <button id="renderBtn">レンダリング</button>
   </div>
 
-  <!-- 右側プレビュー -->
   <div id="preview"></div>
 
   <script>
-    // OSMDのインスタンスを作成。プレビュー領域のIDを指定
-    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("preview", { 
-      drawingParameters: "default", 
+    const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("preview", {
+      drawingParameters: "default",
       autoResize: true
     });
 
-    // ボタンをクリックすると、テキストエリアのMusicXMLをレンダリングする
     document.getElementById("renderBtn").addEventListener("click", async function(){
       const xmlData = document.getElementById("xmlInput").value;
       try {
         await osmd.load(xmlData);
         osmd.render();
       } catch (error) {
-        alert("レンダリングに失敗しました: " + error);
+        alert("error: " + error);
       }
     });
 
-    // ページ読み込み時に初回レンダリングを実行する（必要に応じて）
     window.addEventListener("load", async function() {
       document.getElementById("renderBtn").click();
     });

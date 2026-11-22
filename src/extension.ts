@@ -16,19 +16,19 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const panel = vscode.window.createWebviewPanel(
-        "musicxmlPreview", // 内部識別子
-        "MusicXML プレビュー", // タイトル
-        vscode.ViewColumn.Beside, // エディタの右側に表示
+        "musicxmlPreview",
+        "MusicXML プレビュー",
+        vscode.ViewColumn.Beside,
         {
-          enableScripts: true, // Webview内でJSを実行できるようにする
-          retainContextWhenHidden: true // 非表示時も状態を保持
+          enableScripts: true,
+          retainContextWhenHidden: true
         }
       );
 
-      // 初回表示
+
       panel.webview.html = getWebviewContent(document.getText());
 
-      // ファイルが変更されたら、プレビューを更新
+
       const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
         if (event.document.uri.toString() === document.uri.toString()) {
           panel.webview.postMessage({ type: "update", content: event.document.getText() });
@@ -48,7 +48,7 @@ function getWebviewContent(musicXmlContent: string): string {
   <html lang="ja">
   <head>
     <meta charset="utf-8">
-    <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.6.1/build/opensheetmusicdisplay.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@3.0.0/build/opensheetmusicdisplay.min.js"></script>
     <style>
       body {
         margin: 0;
@@ -77,14 +77,12 @@ function getWebviewContent(musicXmlContent: string): string {
         }
       }
 
-      // VSCodeからデータを受信する
       window.addEventListener("message", (event) => {
         if (event.data.type === "update") {
           renderMusicXML(event.data.content);
         }
       });
 
-      // 初回レンダリング
       renderMusicXML(${JSON.stringify(musicXmlContent)});
     </script>
   </body>
@@ -92,4 +90,4 @@ function getWebviewContent(musicXmlContent: string): string {
   `;
 }
 
-export function deactivate() {}
+export function deactivate() { }
