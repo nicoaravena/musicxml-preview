@@ -1,23 +1,28 @@
+import { randomBytes } from "crypto";
+import * as path from "path";
 import * as vscode from "vscode";
+import { classifyScoreFile, SCORE_HEAD_CHARS } from "./domain/scoreFile";
+import { bindPreview } from "./preview/previewManager";
+
+function isTextScore(document: vscode.TextDocument): boolean {
+  const head = document.getText(
+    new vscode.Range(new vscode.Position(0, 0), document.positionAt(SCORE_HEAD_CHARS)),
+  );
+  return classifyScoreFile(document.fileName, head).kind === "text";
+}
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
-    vscode.commands.registerCommand("musicxmlPreview.show", () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage("MusicXML ファイルを開いてください");
-        return;
-      }
-
-      const document = editor.document;
-      if (document.languageId !== "xml" || !document.fileName.endsWith(".musicxml")) {
-        vscode.window.showErrorMessage("MusicXML ファイルではありません");
+    vscode.commands.registerCommand("musicxmlPreview.showPreviewToSide", () => {
+      const document = vscode.window.activeTextEditor?.document;
+      if (!document || !isTextScore(document)) {
+        vscode.window.showErrorMessage("The active file is not a MusicXML score.");
         return;
       }
 
       const panel = vscode.window.createWebviewPanel(
         "musicxmlPreview",
-        "MusicXML プレビュー",
+        `Preview ${path.basename(document.fileName)}`,
         vscode.ViewColumn.Beside,
         {
           enableScripts: true,
@@ -25,69 +30,20 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
 
-
-      panel.webview.html = getWebviewContent(document.getText());
-
+      const binding = bindPreview(panel.webview, document, randomBytes(16).toString("base64"));
 
       const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
         if (event.document.uri.toString() === document.uri.toString()) {
-          panel.webview.postMessage({ type: "update", content: event.document.getText() });
+          binding.refresh();
         }
       });
 
       panel.onDidDispose(() => {
         changeDocumentSubscription.dispose();
+        binding.dispose();
       });
     })
   );
-}
-
-function getWebviewContent(musicXmlContent: string): string {
-  return /*html*/ `
-  <!DOCTYPE html>
-  <html lang="ja">
-  <head>
-    <meta charset="utf-8">
-    <script src="https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@3.0.0/build/opensheetmusicdisplay.min.js"></script>
-    <style>
-      body {
-        margin: 0;
-        padding: 10px;
-        overflow: auto;
-		background-color: #f0f0f0;
-      }
-      #preview {
-        width: 100%;
-        height: 100vh;
-      }
-    </style>
-  </head>
-  <body>
-    <div id="preview"></div>
-    <script>
-      const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("preview", { autoResize: true });
-
-      async function renderMusicXML(xmlString) {
-        try {
-          await osmd.load(xmlString);
-          osmd.render();
-        } catch (error) {
-          console.error("Error rendering MusicXML:", error);
-          document.getElementById("preview").innerHTML = "<p>Failed to render MusicXML</p>";
-        }
-      }
-
-      window.addEventListener("message", (event) => {
-        if (event.data.type === "update") {
-          renderMusicXML(event.data.content);
-        }
-      });
-
-      renderMusicXML(${JSON.stringify(musicXmlContent)});
-    </script>
-  </body>
-  </html>
-  `;
 }
 
 export function deactivate() { }
