@@ -189,6 +189,25 @@ src/
    *Shipped before slice 2*, on the CDN renderer: `.mxl` only (the text-format `option` waits for
    a not-score UX). Slice 2 moved it onto the versioned protocol and the bundled renderer.
 4. **Localisation** - l10n bundle + nls files, Japanese translation of existing strings.
+   *Shipped.* As built:
+   - `src/shared/uiStrings.ts` holds every runtime string in English. These strings are the
+     `vscode.l10n.t` keys. `src/l10n.ts` is the only module that calls `vscode.l10n`. It builds a
+     `UiLocale` (`language` + `localize`), which the composition root injects into the preview
+     manager, `bindPreview` and the score viewer. vscode-free code and unit tests use `english` / a
+     fake locale instead.
+   - The domain carries no text: `decideRender` returns a notice `reason` (`empty` | `timewise`),
+     and the preview maps each reason to a string.
+   - The webview has no `vscode.l10n`. The host writes its two strings (render failed, not XML) into
+     the page as an attribute-escaped `<body data-strings>` JSON, and sets `<html lang>` from
+     `vscode.env.language`. These are extension-owned strings, never document content. `main.ts`
+     falls back to English per string.
+   - No `@vscode/l10n-dev`: keys are passed as `UI_STRINGS[key]`, not as literals, so the extractor
+     cannot see them. `src/test/unit/l10nBundles.test.ts` checks that every bundle's keys equal the
+     source strings with the same placeholders, and that every manifest `%key%` exists in every
+     `package.nls*.json`.
+   - OSMD's own error messages are shown as OSMD words them, which is English.
+   - There is no automated Japanese run. With `--locale ja` and no Japanese language pack,
+     `vscode.env.language` stays `en`, so the Japanese UI is checked by hand.
 5. **Release readiness** - identity, LICENSE, icon, README/CHANGELOG, engines/types alignment,
    vsce, lockfile/ignores, CI (GitHub Actions: lint, check-types, test under xvfb, `vsce package`).
 

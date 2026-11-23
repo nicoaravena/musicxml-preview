@@ -1,0 +1,6 @@
+{
+  "displayName": "MusicXML Preview",
+  "description": "Preview MusicXML scores (.musicxml, .xml, .mxl) in real time using OpenSheetMusicDisplay.",
+  "command.showPreviewToSide.title": "MusicXML: Open Preview to the Side",
+  "customEditor.scoreViewer.displayName": "MusicXML Score Viewer"
+}

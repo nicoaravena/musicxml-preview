@@ -1,6 +1,6 @@
 import * as assert from "assert";
 import { WebviewMessage } from "../../shared/messages";
-import { createRenderer, NOT_XML_MESSAGE, RENDER_FAILED_MESSAGE } from "../../webview/renderer";
+import { createRenderer } from "../../webview/renderer";
 import { flush } from "../helpers/fakeWebview";
 
 /** A stage whose `show` calls stay pending until the test settles them. */
@@ -24,11 +24,18 @@ class RecordingBanner {
   }
 }
 
+const STRINGS = { renderFailed: "Render failed.", notXml: "Not XML." };
+
 function setup() {
   const stage = new FakeStage();
   const banner = new RecordingBanner();
   const posted: WebviewMessage[] = [];
-  const renderer = createRenderer({ stage, banner, post: (message) => posted.push(message) });
+  const renderer = createRenderer({
+    stage,
+    banner,
+    strings: STRINGS,
+    post: (message) => posted.push(message),
+  });
   return { stage, banner, posted, renderer };
 }
 
@@ -96,7 +103,7 @@ suite("webview renderer", () => {
 
     assert.deepStrictEqual(posted, [
       { type: "error", version: 1, message: "boom" },
-      { type: "error", version: 2, message: RENDER_FAILED_MESSAGE },
+      { type: "error", version: 2, message: STRINGS.renderFailed },
     ]);
   });
 
@@ -133,8 +140,8 @@ suite("webview renderer", () => {
     await renderer.handle(text(1, "https://example.com/score.musicxml"));
 
     assert.deepStrictEqual(stage.shown, []);
-    assert.deepStrictEqual(posted, [{ type: "error", version: 1, message: NOT_XML_MESSAGE }]);
-    assert.deepStrictEqual(banner.calls, [`show:${NOT_XML_MESSAGE}`]);
+    assert.deepStrictEqual(posted, [{ type: "error", version: 1, message: STRINGS.notXml }]);
+    assert.deepStrictEqual(banner.calls, [`show:${STRINGS.notXml}`]);
   });
 
   test("shows a notice without rendering", async () => {

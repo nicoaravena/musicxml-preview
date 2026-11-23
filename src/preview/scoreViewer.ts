@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import * as path from "path";
 import * as vscode from "vscode";
+import { UiLocale } from "../shared/uiStrings";
 import { bindPreview, RenderResult } from "./previewManager";
 
 export const SCORE_VIEWER_VIEW_TYPE = "musicxmlPreview.scoreViewer";
@@ -19,12 +20,13 @@ export interface ScoreViewerDeps {
   readFile(uri: vscode.Uri): Thenable<Uint8Array>;
   watchFile(uri: vscode.Uri): FileWatch;
   createNonce(): string;
+  locale: UiLocale;
   /** The extension's `out/` folder: holds the bundled renderer and is the only local resource root. */
   scriptRoot: vscode.Uri;
   onResult?(uri: string, result: RenderResult): void;
 }
 
-/** File system and nonce defaults; the composition root adds `scriptRoot` and `onResult`. */
+/** File system and nonce defaults; the composition root adds `locale`, `scriptRoot` and `onResult`. */
 export const defaultScoreViewerDeps: Pick<ScoreViewerDeps, "readFile" | "watchFile" | "createNonce"> = {
   // workspace.fs rather than node fs so remote and WSL workspaces work.
   readFile: (uri) => vscode.workspace.fs.readFile(uri),
@@ -52,6 +54,7 @@ export class ScoreViewerProvider implements vscode.CustomReadonlyEditorProvider 
       {
         nonce: this.deps.createNonce(),
         scriptUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(scriptRoot, "webview.js")).toString(),
+        locale: this.deps.locale,
         onResult: (result) => this.deps.onResult?.(document.uri.toString(), result),
       },
     );

@@ -2,6 +2,7 @@
 import { randomBytes } from "crypto";
 import * as vscode from "vscode";
 import { classifyScoreFile, SCORE_HEAD_CHARS } from "./domain/scoreFile";
+import { vscodeLocale } from "./l10n";
 import { PreviewManager, RenderResult } from "./preview/previewManager";
 import {
   defaultScoreViewerDeps,
@@ -52,6 +53,8 @@ export function activate(context: vscode.ExtensionContext): MusicXmlPreviewApi {
   const outUri = vscode.Uri.joinPath(context.extensionUri, "out");
   const rendered = new vscode.EventEmitter<{ uri: string; result: RenderResult }>();
   const createNonce = (): string => randomBytes(16).toString("base64");
+  // The display language only changes with a window reload, so one lookup serves the session.
+  const locale = vscodeLocale();
 
   const previews = new PreviewManager({
     createPanel: (title) => {
@@ -71,6 +74,7 @@ export function activate(context: vscode.ExtensionContext): MusicXmlPreviewApi {
     readText: (key) =>
       vscode.workspace.textDocuments.find((document) => document.uri.toString() === key)?.getText(),
     createNonce,
+    locale,
     clock: { setTimeout, clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout) },
     onResult: (uri, result) => rendered.fire({ uri, result }),
   });
@@ -83,7 +87,7 @@ export function activate(context: vscode.ExtensionContext): MusicXmlPreviewApi {
     vscode.commands.registerCommand("musicxmlPreview.showPreviewToSide", async (uri?: unknown) => {
       const document = await documentFor(uri);
       if (!document || !isTextScore(document)) {
-        vscode.window.showErrorMessage("The active file is not a MusicXML score.");
+        vscode.window.showErrorMessage(locale.localize("notScore"));
         return;
       }
       previews.show(document.uri.toString(), document.fileName);
@@ -96,6 +100,7 @@ export function activate(context: vscode.ExtensionContext): MusicXmlPreviewApi {
       SCORE_VIEWER_VIEW_TYPE,
       new ScoreViewerProvider({
         ...defaultScoreViewerDeps,
+        locale,
         scriptRoot: outUri,
         onResult: (uri, result) => rendered.fire({ uri, result }),
       }),

@@ -1,8 +1,9 @@
 // Wires one preview webview to its score source. No vscode import: the webview and the source
 // are passed in through the narrow interfaces below so this can be unit-tested.
 import * as path from "path";
-import { decideRender } from "../domain/renderRequest";
+import { decideRender, NoticeReason } from "../domain/renderRequest";
 import { HostMessage, parseWebviewMessage, ScoreContent } from "../shared/messages";
+import { UiLocale, UiStringKey } from "../shared/uiStrings";
 import { buildPreviewHtml } from "./webviewHtml";
 
 export interface Disposable {
@@ -31,14 +32,18 @@ export type RenderResult =
   | { kind: "error"; version: number; message: string }
   | { kind: "notice"; version: number; message: string };
 
-/** Shown when the score cannot be loaded, e.g. its file was deleted. */
-export const READ_FAILED_MESSAGE = "The score file could not be read.";
+const NOTICE_STRINGS: Record<NoticeReason, UiStringKey> = {
+  empty: "emptyDocument",
+  timewise: "timewise",
+};
 
 export interface BindPreviewOptions {
   /** Per-load random value for the CSP. */
   nonce: string;
   /** Webview URI of the bundled renderer, `out/webview.js`. */
   scriptUri: string;
+  /** Language and strings for notices and the page. */
+  locale: UiLocale;
   /** Called with the outcome of the latest send; results of superseded sends are dropped. */
   onResult?(result: RenderResult): void;
 }
@@ -46,7 +51,7 @@ export interface BindPreviewOptions {
 export function bindPreview(
   webview: PreviewWebview,
   load: ScoreLoader,
-  { nonce, scriptUri, onResult }: BindPreviewOptions,
+  { nonce, scriptUri, locale, onResult }: BindPreviewOptions,
 ): PreviewBinding {
   // Messages posted before the webview script runs can be lost, so the first send waits for
   // "ready". A webview reload sends "ready" again and gets the current content again.
@@ -56,7 +61,9 @@ export function bindPreview(
   // arrive for superseded renders: only the latest version may post or report.
   let latest = 0;
 
-  const notify = (version: number, message: string): void => {
+  const { localize } = locale;
+  const notify = (version: number, key: UiStringKey): void => {
+    const message = localize(key);
     const notice: HostMessage = { type: "notice", version, message };
     void webview.postMessage(notice);
     onResult?.({ kind: "notice", version, message });
@@ -72,15 +79,15 @@ export function bindPreview(
         }
         const decision = decideRender(content);
         if (decision.kind === "notice") {
-          notify(version, decision.message);
+          notify(version, NOTICE_STRINGS[decision.reason]);
         } else {
           void webview.postMessage(renderMessage(version, decision.content));
         }
       },
-      // The webview keeps its last render under the notice.
+      // E.g. the file was deleted. The webview keeps its last render under the notice.
       () => {
         if (current()) {
-          notify(version, READ_FAILED_MESSAGE);
+          notify(version, "readFailed");
         }
       },
     );
@@ -102,7 +109,13 @@ export function bindPreview(
       );
     }
   });
-  webview.html = buildPreviewHtml({ nonce, cspSource: webview.cspSource, scriptUri });
+  webview.html = buildPreviewHtml({
+    nonce,
+    cspSource: webview.cspSource,
+    scriptUri,
+    lang: locale.language,
+    strings: { renderFailed: localize("renderFailed"), notXml: localize("notXml") },
+  });
 
   return {
     refresh(): void {
@@ -139,6 +152,7 @@ export interface PreviewManagerDeps {
   /** Current text of the open document, or undefined once it is closed. */
   readText(key: string): string | undefined;
   createNonce(): string;
+  locale: UiLocale;
   clock: Clock;
   onResult?(key: string, result: RenderResult): void;
 }
@@ -167,7 +181,7 @@ export class PreviewManager implements Disposable {
       existing.panel.reveal();
       return;
     }
-    const panel = this.deps.createPanel(`Preview ${path.basename(fileName)}`);
+    const panel = this.deps.createPanel(this.deps.locale.localize("previewTitle", path.basename(fileName)));
     const load = (): Promise<ScoreContent> => {
       const text = this.deps.readText(key);
       return text === undefined
@@ -177,6 +191,7 @@ export class PreviewManager implements Disposable {
     const binding = bindPreview(panel.webview, load, {
       nonce: this.deps.createNonce(),
       scriptUri: panel.scriptUri,
+      locale: this.deps.locale,
       onResult: (result) => this.deps.onResult?.(key, result),
     });
     const subscription = panel.onDidDispose(() => {

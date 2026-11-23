@@ -2,6 +2,7 @@
 // DOM glue only: the protocol lives in ./renderer, unit-tested without a DOM.
 import { OpenSheetMusicDisplay } from "opensheetmusicdisplay";
 import { WebviewMessage } from "../shared/messages";
+import { english, WebviewStrings } from "../shared/uiStrings";
 import { Banner, createRenderer, ScoreStage } from "./renderer";
 
 declare function acquireVsCodeApi(): { postMessage(message: WebviewMessage): void };
@@ -80,10 +81,26 @@ function requireElement(id: string): HTMLElement {
   return element;
 }
 
+/** The host's localised strings from `<body data-strings>`, falling back to English per string. */
+function readStrings(): WebviewStrings {
+  const fallback: WebviewStrings = { renderFailed: english("renderFailed"), notXml: english("notXml") };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(document.body.dataset.strings ?? "");
+  } catch {
+    return fallback;
+  }
+  const given = typeof parsed === "object" && parsed !== null ? (parsed as Record<string, unknown>) : {};
+  const pick = (key: keyof WebviewStrings): string =>
+    typeof given[key] === "string" ? given[key] : fallback[key];
+  return { renderFailed: pick("renderFailed"), notXml: pick("notXml") };
+}
+
 const vscode = acquireVsCodeApi();
 const renderer = createRenderer({
   stage: createStage(requireElement("paper")),
   banner: createBanner(requireElement("banner")),
+  strings: readStrings(),
   post: (message) => vscode.postMessage(message),
 });
 window.addEventListener("message", (event: MessageEvent) => void renderer.handle(event.data));

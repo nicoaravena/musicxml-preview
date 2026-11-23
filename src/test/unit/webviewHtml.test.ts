@@ -4,7 +4,20 @@ import { buildPreviewHtml } from "../../preview/webviewHtml";
 const NONCE = "test-nonce-123";
 const CSP_SOURCE = "https://example.vscode-cdn.net";
 const SCRIPT_URI = `${CSP_SOURCE}/out/webview.js`;
-const OPTIONS = { nonce: NONCE, cspSource: CSP_SOURCE, scriptUri: SCRIPT_URI };
+const STRINGS = { renderFailed: "Render failed.", notXml: "Not XML." };
+const OPTIONS = { nonce: NONCE, cspSource: CSP_SOURCE, scriptUri: SCRIPT_URI, lang: "ja", strings: STRINGS };
+
+/** Decode the page's `data-strings` attribute the way the browser's HTML parser would. */
+function stringsOf(html: string): unknown {
+  const match = /<body\s+data-strings="([^"]*)"/.exec(html);
+  assert.ok(match, "expected a data-strings attribute on <body>");
+  const decoded = match[1]
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+  return JSON.parse(decoded);
+}
 
 function cspOf(html: string): Map<string, string> {
   const match = /<meta\s+http-equiv="Content-Security-Policy"\s+content="([^"]*)"/i.exec(html);
@@ -60,5 +73,22 @@ suite("buildPreviewHtml", () => {
     assert.ok(rule, "expected a .page.back rule");
     assert.match(rule[1], /height:\s*0;/);
     assert.match(rule[1], /overflow:\s*hidden;/);
+  });
+
+  test("declares the UI language", () => {
+    assert.ok(buildPreviewHtml(OPTIONS).includes('<html lang="ja">'));
+  });
+
+  test("hands the webview its localised strings", () => {
+    assert.deepStrictEqual(stringsOf(buildPreviewHtml(OPTIONS)), STRINGS);
+  });
+
+  test("escapes the strings and the language so they cannot break out of their attributes", () => {
+    const hostile = { renderFailed: '"><script>alert(1)</script>', notXml: "Tom & Jerry's <b>" };
+    const html = buildPreviewHtml({ ...OPTIONS, lang: '"><script>x</script>', strings: hostile });
+
+    assert.strictEqual((html.match(/<script\b/gi) ?? []).length, 1, "a string opened a script tag");
+    assert.ok(html.includes('<html lang="&quot;&gt;&lt;script&gt;x&lt;/script&gt;">'));
+    assert.deepStrictEqual(stringsOf(html), hostile);
   });
 });

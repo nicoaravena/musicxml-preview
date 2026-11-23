@@ -4,6 +4,10 @@
 // host answers via postMessage. The only script is the bundled renderer (out/webview.js, OSMD
 // included), so nothing is fetched from the network; the CSP only runs scripts carrying the
 // nonce, so even markup that slipped into the page could not execute.
+//
+// The page does carry extension-owned text: the UI language and the strings the renderer shows
+// on its own (it has no vscode.l10n). Both are attribute-escaped.
+import { WebviewStrings } from "../shared/uiStrings";
 
 export interface PreviewHtmlOptions {
   /** Per-load random value; only scripts carrying it may run. */
@@ -12,9 +16,13 @@ export interface PreviewHtmlOptions {
   cspSource: string;
   /** Webview URI of the bundled renderer, `out/webview.js`. */
   scriptUri: string;
+  /** UI language for `<html lang>`, e.g. `vscode.env.language`. */
+  lang: string;
+  /** Localised strings for the renderer, read back by src/webview/main.ts. */
+  strings: WebviewStrings;
 }
 
-export function buildPreviewHtml({ nonce, cspSource, scriptUri }: PreviewHtmlOptions): string {
+export function buildPreviewHtml({ nonce, cspSource, scriptUri, lang, strings }: PreviewHtmlOptions): string {
   const csp = [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
@@ -26,7 +34,7 @@ export function buildPreviewHtml({ nonce, cspSource, scriptUri }: PreviewHtmlOpt
   // Two .page containers: the renderer draws into the hidden one and swaps on success, so a
   // failed render never disturbs the score on screen (src/webview/main.ts).
   return /*html*/ `<!DOCTYPE html>
-<html lang="en">
+<html lang="${escapeAttribute(lang)}">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="Content-Security-Policy" content="${csp}">
@@ -65,7 +73,7 @@ export function buildPreviewHtml({ nonce, cspSource, scriptUri }: PreviewHtmlOpt
     }
   </style>
 </head>
-<body>
+<body data-strings="${escapeAttribute(JSON.stringify(strings))}">
   <div id="banner" role="alert" hidden></div>
   <div id="paper">
     <div class="page front"></div>
@@ -75,4 +83,9 @@ export function buildPreviewHtml({ nonce, cspSource, scriptUri }: PreviewHtmlOpt
 </body>
 </html>
 `;
+}
+
+/** Escape text for a double-quoted HTML attribute value. */
+function escapeAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

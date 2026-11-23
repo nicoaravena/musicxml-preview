@@ -1,0 +1,6 @@
+{
+  "displayName": "MusicXML プレビュー",
+  "description": "OpenSheetMusicDisplay を使って MusicXML 楽譜 (.musicxml、.xml、.mxl) をリアルタイムでプレビューします。",
+  "command.showPreviewToSide.title": "MusicXML: プレビューを横に表示",
+  "customEditor.scoreViewer.displayName": "MusicXML 楽譜ビューアー"
+}

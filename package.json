@@ -1,7 +1,7 @@
 {
   "name": "musicxml-preview",
-  "displayName": "musicxml-preview",
-  "description": "A VSCode extension for previewing MusicXML files in real-time using OpenSheetMusicDisplay.",
+  "displayName": "%displayName%",
+  "description": "%description%",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.140.0"
@@ -13,6 +13,7 @@
     "onLanguage:xml"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "repository": {
     "type": "git",
     "url": "https://github.com/nicoaravena/musicxml-preview"
@@ -31,7 +32,7 @@
     "customEditors": [
       {
         "viewType": "musicxmlPreview.scoreViewer",
-        "displayName": "MusicXML Score Viewer",
+        "displayName": "%customEditor.scoreViewer.displayName%",
         "selector": [
           {
             "filenamePattern": "*.mxl"
@@ -43,7 +44,7 @@
     "commands": [
       {
         "command": "musicxmlPreview.showPreviewToSide",
-        "title": "MusicXML: Open Preview to the Side",
+        "title": "%command.showPreviewToSide.title%",
         "icon": "$(open-preview)"
       }
     ],

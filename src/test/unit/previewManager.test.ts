@@ -1,18 +1,21 @@
 import * as assert from "assert";
-import { TIMEWISE_MESSAGE } from "../../domain/renderRequest";
 import {
   bindPreview,
   PREVIEW_DEBOUNCE_MS,
   PreviewManager,
   PreviewPanel,
-  READ_FAILED_MESSAGE,
   RenderResult,
 } from "../../preview/previewManager";
 import { FakeClock } from "../helpers/fakeClock";
+import { FAKE_LOCALE } from "../helpers/fakeLocale";
 import { ScoreContent } from "../../shared/messages";
 import { FakeWebview, flush } from "../helpers/fakeWebview";
 
-const OPTIONS = { nonce: "nonce", scriptUri: "https://example.vscode-cdn.net/out/webview.js" };
+const OPTIONS = {
+  nonce: "nonce",
+  scriptUri: "https://example.vscode-cdn.net/out/webview.js",
+  locale: FAKE_LOCALE,
+};
 
 // A score whose text closes the inline script and opens its own.
 const HOSTILE_SCORE =
@@ -140,9 +143,9 @@ suite("bindPreview", () => {
     await flush();
 
     assert.deepStrictEqual(webview.posted, [
-      { type: "notice", version: 1, message: READ_FAILED_MESSAGE },
+      { type: "notice", version: 1, message: "readFailed" },
     ]);
-    assert.deepStrictEqual(results, [{ kind: "notice", version: 1, message: READ_FAILED_MESSAGE }]);
+    assert.deepStrictEqual(results, [{ kind: "notice", version: 1, message: "readFailed" }]);
   });
 
   test("posts a notice instead of rendering a timewise score", async () => {
@@ -154,8 +157,27 @@ suite("bindPreview", () => {
     webview.receive({ type: "ready" });
     await flush();
 
-    assert.deepStrictEqual(webview.posted, [{ type: "notice", version: 1, message: TIMEWISE_MESSAGE }]);
-    assert.deepStrictEqual(results, [{ kind: "notice", version: 1, message: TIMEWISE_MESSAGE }]);
+    assert.deepStrictEqual(webview.posted, [{ type: "notice", version: 1, message: "timewise" }]);
+    assert.deepStrictEqual(results, [{ kind: "notice", version: 1, message: "timewise" }]);
+  });
+
+  test("posts a localised notice instead of rendering an empty document", async () => {
+    const webview = new FakeWebview();
+    bindPreview(webview, () => Promise.resolve({ format: "text", data: "" }), OPTIONS);
+
+    webview.receive({ type: "ready" });
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, [{ type: "notice", version: 1, message: "emptyDocument" }]);
+  });
+
+  test("gives the page the localised webview strings and the UI language", () => {
+    const webview = new FakeWebview();
+    bindPreview(webview, () => Promise.reject(new Error("unused")), OPTIONS);
+
+    assert.ok(webview.html.includes('<html lang="xx">'), "expected the UI language");
+    assert.ok(webview.html.includes("renderFailed"), "expected the render-failed string");
+    assert.ok(webview.html.includes("notXml"), "expected the not-XML string");
   });
 
   test("forwards the latest version's acks", async () => {
@@ -275,6 +297,7 @@ function setupManager() {
     },
     readText: (key) => texts.get(key),
     createNonce: () => "nonce",
+    locale: FAKE_LOCALE,
     clock,
     onResult: (key, result) => results.push([key, result]),
   });
@@ -284,12 +307,12 @@ function setupManager() {
 const KEY = "file:///scores/hello.musicxml";
 
 suite("PreviewManager", () => {
-  test("opens one panel titled Preview hello.musicxml", () => {
+  test("opens one panel with the localised title for hello.musicxml", () => {
     const { manager, panels } = setupManager();
     manager.show(KEY, "/scores/hello.musicxml");
     assert.deepStrictEqual(
       panels.map((panel) => panel.title),
-      ["Preview hello.musicxml"],
+      ["previewTitle|hello.musicxml"],
     );
   });
 
@@ -383,7 +406,7 @@ suite("PreviewManager", () => {
     panels[0].webview.receive({ type: "ready" });
     await flush();
     assert.deepStrictEqual(panels[0].webview.posted, [
-      { type: "notice", version: 1, message: READ_FAILED_MESSAGE },
+      { type: "notice", version: 1, message: "readFailed" },
     ]);
   });
 

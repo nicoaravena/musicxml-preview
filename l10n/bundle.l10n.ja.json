@@ -1,0 +1,9 @@
+{
+  "The active file is not a MusicXML score.": "アクティブなファイルは MusicXML 楽譜ではありません。",
+  "Preview {0}": "プレビュー {0}",
+  "This document is empty.": "このドキュメントは空です。",
+  "score-timewise is not supported; convert to score-partwise.": "score-timewise はサポートされていません。score-partwise に変換してください。",
+  "The score file could not be read.": "楽譜ファイルを読み込めませんでした。",
+  "The score could not be rendered.": "楽譜をレンダリングできませんでした。",
+  "The document is not XML.": "このドキュメントは XML ではありません。"
+}

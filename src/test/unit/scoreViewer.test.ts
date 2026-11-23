@@ -1,7 +1,8 @@
 import * as assert from "assert";
 import * as vscode from "vscode";
-import { READ_FAILED_MESSAGE, RenderResult } from "../../preview/previewManager";
+import { RenderResult } from "../../preview/previewManager";
 import { ScoreViewerProvider } from "../../preview/scoreViewer";
+import { FAKE_LOCALE } from "../helpers/fakeLocale";
 import { FakeWebview, flush } from "../helpers/fakeWebview";
 
 const SCORE_URI = vscode.Uri.file("/scores/hello.mxl");
@@ -34,6 +35,7 @@ class FakeScoreFile {
       };
     },
     createNonce: () => "nonce",
+    locale: FAKE_LOCALE,
     scriptRoot: SCRIPT_ROOT,
     onResult: (uri: string, result: RenderResult) => this.results.push([uri, result]),
   };
@@ -125,7 +127,7 @@ suite("ScoreViewerProvider", () => {
     assert.deepStrictEqual(webview.posted.at(-1), {
       type: "notice",
       version: 2,
-      message: READ_FAILED_MESSAGE,
+      message: "readFailed",
     });
   });
 

@@ -3,7 +3,7 @@ import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { TIMEWISE_MESSAGE } from "../../domain/renderRequest";
+import { english } from "../../shared/uiStrings";
 import { FIXTURES, fixtureUri, getApi, nextResult, openFixture, waitFor } from "../helpers/integration";
 
 const COMMAND = "musicxmlPreview.showPreviewToSide";
@@ -77,7 +77,7 @@ suite("Rendering", () => {
     await openFixture("timewise.musicxml");
     await vscode.commands.executeCommand(COMMAND);
 
-    assert.deepStrictEqual(await result, { kind: "notice", version: 1, message: TIMEWISE_MESSAGE });
+    assert.deepStrictEqual(await result, { kind: "notice", version: 1, message: english("timewise") });
   });
 
   test("the editor-title button previews the editor it belongs to, not the active one", async () => {

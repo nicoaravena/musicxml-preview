@@ -2,6 +2,7 @@
 // engine and the banner are passed in, so this runs under unit tests in Node; `main.ts` wires
 // it to OSMD and the page.
 import { HostMessage, parseHostMessage, WebviewMessage } from "../shared/messages";
+import { WebviewStrings } from "../shared/uiStrings";
 
 /** Shows a score. Resolves once visible; on rejection the previously shown score must stay visible. */
 export interface ScoreStage {
@@ -17,6 +18,8 @@ export interface Banner {
 export interface RendererDeps {
   stage: ScoreStage;
   banner: Banner;
+  /** Localised by the host; OSMD's own error messages are shown as OSMD words them. */
+  strings: WebviewStrings;
   post(message: WebviewMessage): void;
 }
 
@@ -27,15 +30,9 @@ export interface Renderer {
   handle(message: unknown): Promise<void>;
 }
 
-/** Shown when a render fails without a usable message. */
-export const RENDER_FAILED_MESSAGE = "The score could not be rendered.";
-
-/** Shown for text that is not XML at all (OSMD would request it as a URL). */
-export const NOT_XML_MESSAGE = "The document is not XML.";
-
 type RenderMessage = Extract<HostMessage, { type: "render" }>;
 
-export function createRenderer({ stage, banner, post }: RendererDeps): Renderer {
+export function createRenderer({ stage, banner, strings, post }: RendererDeps): Renderer {
   // Renders run one at a time; while one is in flight only the newest request waits, so fast
   // typing never builds a backlog. `newest` is the latest version seen, render or notice:
   // a result for anything older may still be acked but must not change the banner.
@@ -48,8 +45,9 @@ export function createRenderer({ stage, banner, post }: RendererDeps): Renderer 
     const input =
       message.format === "mxl" ? new Blob([message.data as Uint8Array<ArrayBuffer>]) : message.data;
     try {
+      // Text that is not XML at all would be requested by OSMD as a URL.
       if (typeof input === "string" && !/^\s*</.test(input)) {
-        throw new Error(NOT_XML_MESSAGE);
+        throw new Error(strings.notXml);
       }
       await stage.show(input);
       if (message.version >= newest) {
@@ -57,7 +55,7 @@ export function createRenderer({ stage, banner, post }: RendererDeps): Renderer 
       }
       post({ type: "rendered", version: message.version });
     } catch (error) {
-      const text = errorText(error);
+      const text = errorText(error, strings.renderFailed);
       if (message.version >= newest) {
         banner.show(text);
       }
@@ -99,12 +97,13 @@ export function createRenderer({ stage, banner, post }: RendererDeps): Renderer 
   };
 }
 
-function errorText(error: unknown): string {
+/** The failure's own message, or `fallback` when it has none. */
+function errorText(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) {
     return error.message;
   }
   if (typeof error === "string" && error) {
     return error;
   }
-  return RENDER_FAILED_MESSAGE;
+  return fallback;
 }
