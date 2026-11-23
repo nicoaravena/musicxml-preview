@@ -46,9 +46,10 @@ export function buildPreviewHtml({ nonce, cspSource }: PreviewHtmlOptions): stri
       const vscode = acquireVsCodeApi();
       const osmd = new opensheetmusicdisplay.OpenSheetMusicDisplay("preview", { autoResize: true });
 
-      async function renderMusicXML(xmlString) {
+      // OSMD unzips compressed MusicXML itself when given a Blob; text goes in as a string.
+      async function renderMusicXML(format, data) {
         try {
-          await osmd.load(xmlString);
+          await osmd.load(format === "mxl" ? new Blob([data]) : data);
           osmd.render();
         } catch (error) {
           console.error("Error rendering MusicXML:", error);
@@ -58,7 +59,7 @@ export function buildPreviewHtml({ nonce, cspSource }: PreviewHtmlOptions): stri
 
       window.addEventListener("message", (event) => {
         if (event.data.type === "update") {
-          renderMusicXML(event.data.content);
+          renderMusicXML(event.data.format, event.data.data);
         }
       });
 

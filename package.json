@@ -25,6 +25,18 @@
         ]
       }
     ],
+    "customEditors": [
+      {
+        "viewType": "musicxmlPreview.scoreViewer",
+        "displayName": "MusicXML Score Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.mxl"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
     "commands": [
       {
         "command": "musicxmlPreview.showPreviewToSide",

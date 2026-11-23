@@ -3,6 +3,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { classifyScoreFile, SCORE_HEAD_CHARS } from "./domain/scoreFile";
 import { bindPreview } from "./preview/previewManager";
+import { SCORE_VIEWER_VIEW_TYPE, ScoreViewerProvider } from "./preview/scoreViewer";
 
 function isTextScore(document: vscode.TextDocument): boolean {
   const head = document.getText(
@@ -30,7 +31,11 @@ export function activate(context: vscode.ExtensionContext) {
         }
       );
 
-      const binding = bindPreview(panel.webview, document, randomBytes(16).toString("base64"));
+      const binding = bindPreview(
+        panel.webview,
+        () => Promise.resolve({ format: "text", data: document.getText() }),
+        randomBytes(16).toString("base64"),
+      );
 
       const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((event) => {
         if (event.document.uri.toString() === document.uri.toString()) {
@@ -42,7 +47,8 @@ export function activate(context: vscode.ExtensionContext) {
         changeDocumentSubscription.dispose();
         binding.dispose();
       });
-    })
+    }),
+    vscode.window.registerCustomEditorProvider(SCORE_VIEWER_VIEW_TYPE, new ScoreViewerProvider()),
   );
 }
 

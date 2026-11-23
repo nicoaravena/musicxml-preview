@@ -17,6 +17,69 @@ function cspOf(html: string): Map<string, string> {
   return directives;
 }
 
+/**
+ * Run the page's inline renderer script against fakes and return what it handed to OSMD.
+ * `deliver` simulates the host posting a message to the webview.
+ */
+function runRenderer(): { loaded: unknown[]; deliver(message: unknown): Promise<void> } {
+  const html = buildPreviewHtml({ nonce: NONCE, cspSource: CSP_SOURCE });
+  const inline = [...html.matchAll(/<script\b(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)];
+  assert.strictEqual(inline.length, 1, "expected exactly one inline script");
+
+  const loaded: unknown[] = [];
+  let onMessage: ((event: { data: unknown }) => void) | undefined;
+  const fakes = {
+    acquireVsCodeApi: () => ({ postMessage: () => undefined }),
+    opensheetmusicdisplay: {
+      OpenSheetMusicDisplay: class {
+        load(content: unknown): Promise<void> {
+          loaded.push(content);
+          return Promise.resolve();
+        }
+        render(): void {}
+      },
+    },
+    window: {
+      addEventListener: (type: string, listener: (event: { data: unknown }) => void) => {
+        if (type === "message") {
+          onMessage = listener;
+        }
+      },
+    },
+    document: { getElementById: () => ({ innerHTML: "" }) },
+  };
+  new Function(...Object.keys(fakes), inline[0][1])(...Object.values(fakes));
+
+  return {
+    loaded,
+    async deliver(message) {
+      assert.ok(onMessage, "renderer did not listen for messages");
+      onMessage({ data: message });
+      await new Promise((resolve) => setImmediate(resolve));
+    },
+  };
+}
+
+suite("preview renderer script", () => {
+  test("passes text scores to OSMD as a string", async () => {
+    const renderer = runRenderer();
+    await renderer.deliver({ type: "update", format: "text", data: "<score-partwise/>" });
+    assert.deepStrictEqual(renderer.loaded, ["<score-partwise/>"]);
+  });
+
+  test("passes .mxl bytes to OSMD as a Blob", async () => {
+    const renderer = runRenderer();
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+
+    await renderer.deliver({ type: "update", format: "mxl", data: bytes });
+
+    assert.strictEqual(renderer.loaded.length, 1);
+    const blob = renderer.loaded[0];
+    assert.ok(blob instanceof Blob, "expected a Blob");
+    assert.deepStrictEqual(new Uint8Array(await blob.arrayBuffer()), bytes);
+  });
+});
+
 suite("buildPreviewHtml", () => {
   test("denies everything not explicitly allowed", () => {
     const csp = cspOf(buildPreviewHtml({ nonce: NONCE, cspSource: CSP_SOURCE }));

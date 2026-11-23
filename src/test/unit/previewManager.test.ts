@@ -1,5 +1,7 @@
 import * as assert from "assert";
-import { bindPreview, PreviewWebview } from "../../preview/previewManager";
+import { bindPreview } from "../../preview/previewManager";
+import { ScoreContent } from "../../shared/messages";
+import { FakeWebview, flush } from "../helpers/fakeWebview";
 
 // A score whose text closes the inline script and opens its own.
 const HOSTILE_SCORE =
@@ -7,79 +9,132 @@ const HOSTILE_SCORE =
   "</script><script>window.pwned = true</script>" +
   "</credit-words></credit></score-partwise>";
 
-class FakeWebview implements PreviewWebview {
-  html = "";
-  readonly cspSource = "https://example.vscode-cdn.net";
-  readonly posted: unknown[] = [];
-  private listeners: ((message: unknown) => void)[] = [];
-
-  postMessage(message: unknown): Thenable<boolean> {
-    this.posted.push(message);
-    return Promise.resolve(true);
-  }
-
-  onDidReceiveMessage(listener: (message: unknown) => void): { dispose(): void } {
-    this.listeners.push(listener);
-    return { dispose: () => (this.listeners = this.listeners.filter((l) => l !== listener)) };
-  }
-
-  /** Simulate the webview script calling `vscode.postMessage(message)`. */
-  receive(message: unknown): void {
-    for (const listener of this.listeners) {
-      listener(message);
-    }
-  }
-}
-
-function sourceWithText(initial: string): { text: string; getText(): string } {
+/** A loader returning whatever `text` holds at call time, like `document.getText()`. */
+function textSource(initial: string): { text: string; load(): Promise<ScoreContent> } {
   return {
     text: initial,
-    getText() {
-      return this.text;
+    load() {
+      return Promise.resolve({ format: "text", data: this.text });
     },
+  };
+}
+
+/** A loader whose calls stay pending until the test settles them, in any order. */
+function controlledSource(): {
+  load(): Promise<ScoreContent>;
+  pending: { resolve(content: ScoreContent): void; reject(error: Error): void }[];
+} {
+  const pending: { resolve(content: ScoreContent): void; reject(error: Error): void }[] = [];
+  return {
+    pending,
+    load: () => new Promise<ScoreContent>((resolve, reject) => pending.push({ resolve, reject })),
   };
 }
 
 suite("bindPreview", () => {
   test("never writes the document text into the webview HTML", () => {
     const webview = new FakeWebview();
-    bindPreview(webview, sourceWithText(HOSTILE_SCORE), "nonce");
+    const source = textSource(HOSTILE_SCORE);
+    bindPreview(webview, () => source.load(), "nonce");
     assert.ok(!webview.html.includes("window.pwned"), "document text leaked into the HTML");
   });
 
-  test("sends the document text once the webview reports ready", () => {
+  test("sends the score once the webview reports ready", async () => {
     const webview = new FakeWebview();
-    bindPreview(webview, sourceWithText(HOSTILE_SCORE), "nonce");
+    const source = textSource(HOSTILE_SCORE);
+    bindPreview(webview, () => source.load(), "nonce");
+    await flush();
     assert.deepStrictEqual(webview.posted, []);
 
     webview.receive({ type: "ready" });
-
-    assert.deepStrictEqual(webview.posted, [{ type: "update", content: HOSTILE_SCORE }]);
-  });
-
-  test("refresh waits for ready, then sends the latest text", () => {
-    const webview = new FakeWebview();
-    const source = sourceWithText("<score-partwise/>");
-    const binding = bindPreview(webview, source, "nonce");
-
-    binding.refresh();
-    assert.deepStrictEqual(webview.posted, []);
-
-    webview.receive({ type: "ready" });
-    source.text = "<score-partwise><part-list/></score-partwise>";
-    binding.refresh();
+    await flush();
 
     assert.deepStrictEqual(webview.posted, [
-      { type: "update", content: "<score-partwise/>" },
-      { type: "update", content: "<score-partwise><part-list/></score-partwise>" },
+      { type: "update", format: "text", data: HOSTILE_SCORE },
     ]);
   });
 
-  test("ignores messages after dispose", () => {
+  test("refresh waits for ready, then sends the latest score", async () => {
     const webview = new FakeWebview();
-    bindPreview(webview, sourceWithText("<score-partwise/>"), "nonce").dispose();
+    const source = textSource("<score-partwise/>");
+    const binding = bindPreview(webview, () => source.load(), "nonce");
+
+    binding.refresh();
+    await flush();
+    assert.deepStrictEqual(webview.posted, []);
 
     webview.receive({ type: "ready" });
+    await flush();
+    source.text = "<score-partwise><part-list/></score-partwise>";
+    binding.refresh();
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, [
+      { type: "update", format: "text", data: "<score-partwise/>" },
+      { type: "update", format: "text", data: "<score-partwise><part-list/></score-partwise>" },
+    ]);
+  });
+
+  test("sends .mxl content as raw bytes", async () => {
+    const webview = new FakeWebview();
+    const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04]);
+    bindPreview(webview, () => Promise.resolve({ format: "mxl", data: bytes }), "nonce");
+
+    webview.receive({ type: "ready" });
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, [{ type: "update", format: "mxl", data: bytes }]);
+    assert.ok((webview.posted[0] as { data: unknown }).data instanceof Uint8Array);
+  });
+
+  test("drops a slow earlier load that settles after a newer one", async () => {
+    const webview = new FakeWebview();
+    const source = controlledSource();
+    const binding = bindPreview(webview, source.load, "nonce");
+
+    webview.receive({ type: "ready" });
+    binding.refresh();
+    const [older, newer] = source.pending;
+    newer.resolve({ format: "text", data: "new" });
+    await flush();
+    older.resolve({ format: "text", data: "old" });
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, [{ type: "update", format: "text", data: "new" }]);
+  });
+
+  test("posts nothing when the load fails", async () => {
+    const webview = new FakeWebview();
+    const source = controlledSource();
+    bindPreview(webview, source.load, "nonce");
+
+    webview.receive({ type: "ready" });
+    source.pending[0].reject(new Error("file deleted"));
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, []);
+  });
+
+  test("posts nothing when a load settles after dispose", async () => {
+    const webview = new FakeWebview();
+    const source = controlledSource();
+    const binding = bindPreview(webview, source.load, "nonce");
+
+    webview.receive({ type: "ready" });
+    binding.dispose();
+    source.pending[0].resolve({ format: "text", data: "<score-partwise/>" });
+    await flush();
+
+    assert.deepStrictEqual(webview.posted, []);
+  });
+
+  test("ignores messages after dispose", async () => {
+    const webview = new FakeWebview();
+    const source = textSource("<score-partwise/>");
+    bindPreview(webview, () => source.load(), "nonce").dispose();
+
+    webview.receive({ type: "ready" });
+    await flush();
 
     assert.deepStrictEqual(webview.posted, []);
   });

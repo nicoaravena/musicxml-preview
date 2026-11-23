@@ -175,6 +175,10 @@ src/
 2. **Safe offline renderer** - bundled OSMD, CSP, postMessage-only, ready/rendered/error protocol,
    error banner, debounce, panel reuse, editor-title button + context key.
 3. **Score viewer** - custom editor for `.mxl` (+ option for text formats), disk watcher.
+   *Shipped before slice 2*, on the CDN renderer: `.mxl` only (the text-format `option` waits for
+   a not-score UX), messages `{ type: "update", format, data }` from `src/shared/messages.ts`
+   without versions or acks, so integration tests assert the viewer opens, not that it rendered.
+   Slice 2 extends this protocol rather than replacing it.
 4. **Localisation** - l10n bundle + nls files, Japanese translation of existing strings.
 5. **Release readiness** - identity, LICENSE, icon, README/CHANGELOG, engines/types alignment,
    vsce, lockfile/ignores, CI (GitHub Actions: lint, check-types, test under xvfb, `vsce package`).
@@ -200,6 +204,7 @@ none supplied), whether the preview closes with its source, test helper structur
 - Approach 2 (command + score viewer); own Marketplace identity; English UI with Japanese kept.
 - Publisher not created yet -> placeholder until slice 5; manual publishing; min VS Code 1.140;
   display name "MusicXML Preview".
+- Build the `.mxl` score viewer (slice 3) before slice 2, so `.mxl` previews sooner.
 
 ## Calls made by Claude
 

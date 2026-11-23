@@ -1,5 +1,6 @@
-// Wires one preview webview to its source document. No vscode import: the webview and the
-// document are passed in through the narrow interfaces below so this can be unit-tested.
+// Wires one preview webview to its score source. No vscode import: the webview and the source
+// are passed in through the narrow interfaces below so this can be unit-tested.
+import { HostMessage, ScoreContent } from "../shared/messages";
 import { buildPreviewHtml } from "./webviewHtml";
 
 export interface Disposable {
@@ -14,26 +15,38 @@ export interface PreviewWebview {
   onDidReceiveMessage(listener: (message: unknown) => void): Disposable;
 }
 
-/** The parts of `vscode.TextDocument` the preview uses. */
-export interface PreviewSource {
-  getText(): string;
-}
+/** Reads the score's current content: an unsaved text document, or a file on disk. */
+export type ScoreLoader = () => Promise<ScoreContent>;
 
 export interface PreviewBinding extends Disposable {
-  /** Send the source's current text to the webview. */
+  /** Load the score again and send it to the webview. */
   refresh(): void;
 }
 
 export function bindPreview(
   webview: PreviewWebview,
-  source: PreviewSource,
+  load: ScoreLoader,
   nonce: string,
 ): PreviewBinding {
   // Messages posted before the webview script runs can be lost, so the first send waits for
-  // "ready". A webview reload sends "ready" again and gets the current text again.
+  // "ready". A webview reload sends "ready" again and gets the current content again.
   let ready = false;
+  let disposed = false;
+  // Loads can settle out of order (disk reads); only the most recent one may post.
+  let latest = 0;
   const send = (): void => {
-    void webview.postMessage({ type: "update", content: source.getText() });
+    const sequence = ++latest;
+    load().then(
+      (content) => {
+        if (!disposed && sequence === latest) {
+          const message: HostMessage = { type: "update", ...content };
+          void webview.postMessage(message);
+        }
+      },
+      // A failed load (e.g. the file was deleted) keeps the last render on screen. Reporting it
+      // needs the error banner from slice 2 (docs/SPEC.md "Renderer and messaging").
+      () => undefined,
+    );
   };
 
   const subscription = webview.onDidReceiveMessage((message) => {
@@ -51,6 +64,7 @@ export function bindPreview(
       }
     },
     dispose(): void {
+      disposed = true;
       subscription.dispose();
     },
   };
