@@ -14,5 +14,7 @@
 		// "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
 		// "noFallthroughCasesInSwitch": true, /* Report errors for fallthrough cases in switch statement. */
 		// "noUnusedParameters": true,  /* Report errors on unused parameters. */
-	}
+	},
+	// Browser entry point: type-checked by src/webview/tsconfig.json, bundled by esbuild.
+	"exclude": ["node_modules", "out", ".vscode-test", "src/webview/main.ts"]
 }

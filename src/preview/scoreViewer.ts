@@ -3,7 +3,7 @@
 import { randomBytes } from "crypto";
 import * as path from "path";
 import * as vscode from "vscode";
-import { bindPreview } from "./previewManager";
+import { bindPreview, RenderResult } from "./previewManager";
 
 export const SCORE_VIEWER_VIEW_TYPE = "musicxmlPreview.scoreViewer";
 
@@ -11,6 +11,7 @@ export const SCORE_VIEWER_VIEW_TYPE = "musicxmlPreview.scoreViewer";
 export interface FileWatch extends vscode.Disposable {
   readonly onDidChange: vscode.Event<vscode.Uri>;
   readonly onDidCreate: vscode.Event<vscode.Uri>;
+  readonly onDidDelete: vscode.Event<vscode.Uri>;
 }
 
 /** I/O the viewer needs, injected so it can be unit-tested without real files. */
@@ -18,9 +19,13 @@ export interface ScoreViewerDeps {
   readFile(uri: vscode.Uri): Thenable<Uint8Array>;
   watchFile(uri: vscode.Uri): FileWatch;
   createNonce(): string;
+  /** The extension's `out/` folder: holds the bundled renderer and is the only local resource root. */
+  scriptRoot: vscode.Uri;
+  onResult?(uri: string, result: RenderResult): void;
 }
 
-export const defaultScoreViewerDeps: ScoreViewerDeps = {
+/** File system and nonce defaults; the composition root adds `scriptRoot` and `onResult`. */
+export const defaultScoreViewerDeps: Pick<ScoreViewerDeps, "readFile" | "watchFile" | "createNonce"> = {
   // workspace.fs rather than node fs so remote and WSL workspaces work.
   readFile: (uri) => vscode.workspace.fs.readFile(uri),
   watchFile: (uri) =>
@@ -31,7 +36,7 @@ export const defaultScoreViewerDeps: ScoreViewerDeps = {
 };
 
 export class ScoreViewerProvider implements vscode.CustomReadonlyEditorProvider {
-  constructor(private readonly deps: ScoreViewerDeps = defaultScoreViewerDeps) {}
+  constructor(private readonly deps: ScoreViewerDeps) {}
 
   openCustomDocument(uri: vscode.Uri): vscode.CustomDocument {
     return { uri, dispose: () => undefined };
@@ -39,11 +44,16 @@ export class ScoreViewerProvider implements vscode.CustomReadonlyEditorProvider 
 
   resolveCustomEditor(document: vscode.CustomDocument, panel: vscode.WebviewPanel): void {
     // Only `.mxl` is registered for this viewer today; text formats are a follow-up.
-    panel.webview.options = { enableScripts: true };
+    const { scriptRoot } = this.deps;
+    panel.webview.options = { enableScripts: true, localResourceRoots: [scriptRoot] };
     const binding = bindPreview(
       panel.webview,
       () => Promise.resolve(this.deps.readFile(document.uri)).then((data) => ({ format: "mxl", data })),
-      this.deps.createNonce(),
+      {
+        nonce: this.deps.createNonce(),
+        scriptUri: panel.webview.asWebviewUri(vscode.Uri.joinPath(scriptRoot, "webview.js")).toString(),
+        onResult: (result) => this.deps.onResult?.(document.uri.toString(), result),
+      },
     );
 
     // Editors such as MuseScore may rewrite the file in place or delete and re-create it.
@@ -52,6 +62,8 @@ export class ScoreViewerProvider implements vscode.CustomReadonlyEditorProvider 
       watch,
       watch.onDidChange(() => binding.refresh()),
       watch.onDidCreate(() => binding.refresh()),
+      // The read fails, so the viewer shows a notice above the last render.
+      watch.onDidDelete(() => binding.refresh()),
       binding,
     ];
     panel.onDidDispose(() => subscriptions.forEach((subscription) => subscription.dispose()));

@@ -8,6 +8,11 @@ export class FakeWebview implements PreviewWebview {
   readonly posted: unknown[] = [];
   private listeners: ((message: unknown) => void)[] = [];
 
+  /** Real webviews map file URIs to a webview origin; tests only need the identity. */
+  asWebviewUri<T>(uri: T): T {
+    return uri;
+  }
+
   postMessage(message: unknown): Thenable<boolean> {
     this.posted.push(message);
     return Promise.resolve(true);

@@ -1,0 +1,12 @@
+{
+	// Type-checks the browser entry point (DOM types), which the root tsconfig excludes.
+	// esbuild bundles it into out/webview.js; tsc never emits it.
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"lib": ["ES2022", "DOM"],
+		"types": [],
+		"noEmit": true
+	},
+	"include": ["main.ts"],
+	"exclude": []
+}

@@ -1,16 +1,8 @@
 import * as assert from "assert";
-import * as path from "path";
 import * as vscode from "vscode";
+import { openFixture, waitFor } from "../helpers/integration";
 
 const COMMAND = "musicxmlPreview.showPreviewToSide";
-// out/test/integration -> src/test/fixtures (tsc does not copy fixtures into out/).
-const FIXTURES = path.resolve(__dirname, "../../../src/test/fixtures");
-
-async function openFixture(name: string): Promise<vscode.TextDocument> {
-  const document = await vscode.workspace.openTextDocument(path.join(FIXTURES, name));
-  await vscode.window.showTextDocument(document);
-  return document;
-}
 
 function previewTabCount(): number {
   return vscode.window.tabGroups.all
@@ -19,17 +11,6 @@ function previewTabCount(): number {
       (tab) =>
         tab.input instanceof vscode.TabInputWebview && tab.input.viewType.endsWith("musicxmlPreview"),
     ).length;
-}
-
-async function waitFor(condition: () => boolean, timeoutMs = 2000): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (condition()) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-  return condition();
 }
 
 suite("Open Preview to the Side command", () => {

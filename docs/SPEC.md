@@ -174,11 +174,20 @@ src/
    `.musicxml`/`.xml`, English messages. Unblocks preview.
 2. **Safe offline renderer** - bundled OSMD, CSP, postMessage-only, ready/rendered/error protocol,
    error banner, debounce, panel reuse, editor-title button + context key.
+   *Shipped.* As built:
+   - Host -> webview messages are `render` and `notice` (`{ type: "notice", version, message }`
+     for problems found host-side: empty document, `score-timewise`, unreadable file). The
+     webview acks only renders. The protocol and its parsers are in `src/shared/messages.ts`.
+   - `src/webview/renderer.ts` is the DOM-free webview protocol. `src/webview/main.ts` draws
+     through a double-buffered stage: it renders into a hidden page and swaps only on success.
+     Text that does not start with `<` is rejected before OSMD, which would fetch it as a URL.
+   - `.mxl` bytes are posted as a plain `Uint8Array`, because a Node `Buffer` (what
+     `workspace.fs.readFile` returns) is serialised as JSON.
+   - `activate` returns an internal `onDidRender` event. Integration tests use it to assert real
+     `rendered` / `error` / `notice` results.
 3. **Score viewer** - custom editor for `.mxl` (+ option for text formats), disk watcher.
    *Shipped before slice 2*, on the CDN renderer: `.mxl` only (the text-format `option` waits for
-   a not-score UX), messages `{ type: "update", format, data }` from `src/shared/messages.ts`
-   without versions or acks, so integration tests assert the viewer opens, not that it rendered.
-   Slice 2 extends this protocol rather than replacing it.
+   a not-score UX). Slice 2 moved it onto the versioned protocol and the bundled renderer.
 4. **Localisation** - l10n bundle + nls files, Japanese translation of existing strings.
 5. **Release readiness** - identity, LICENSE, icon, README/CHANGELOG, engines/types alignment,
    vsce, lockfile/ignores, CI (GitHub Actions: lint, check-types, test under xvfb, `vsce package`).

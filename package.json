@@ -9,6 +9,9 @@
   "categories": [
     "Other"
   ],
+  "activationEvents": [
+    "onLanguage:xml"
+  ],
   "main": "./out/extension.js",
   "repository": {
     "type": "git",
@@ -40,28 +43,48 @@
     "commands": [
       {
         "command": "musicxmlPreview.showPreviewToSide",
-        "title": "MusicXML: Open Preview to the Side"
+        "title": "MusicXML: Open Preview to the Side",
+        "icon": "$(open-preview)"
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "musicxmlPreview.showPreviewToSide",
+          "when": "musicxmlPreview.isScore || resourceExtname == .musicxml",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "musicxmlPreview.showPreviewToSide",
+          "when": "musicxmlPreview.isScore || resourceExtname == .musicxml"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile",
-    "compile": "pnpm run check-types && pnpm run lint && tsc -p ./",
+    "compile": "pnpm run check-types && pnpm run lint && tsc -p ./ && node esbuild.js",
     "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
-    "check-types": "tsc --noEmit",
+    "check-types": "tsc --noEmit && tsc --noEmit -p src/webview",
     "test": "pnpm run compile && vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "~1.140.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "~1.140.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.25.1",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "opensheetmusicdisplay": "3.0.0"
   }
 }

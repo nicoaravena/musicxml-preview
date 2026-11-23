@@ -41,7 +41,8 @@ function extensionOf(fileName: string): string {
   return dot === -1 ? "" : base.slice(dot + 1).toLowerCase();
 }
 
-function scoreRootOf(head: string): ScoreRoot | undefined {
+/** The MusicXML score root of a document head, or undefined when the root is anything else. */
+export function scoreRootOf(head: string): ScoreRoot | undefined {
   const name = rootElementName(head);
   return SCORE_ROOTS.find((root) => root === name);
 }
