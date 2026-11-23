@@ -210,6 +210,23 @@ src/
      `vscode.env.language` stays `en`, so the Japanese UI is checked by hand.
 5. **Release readiness** - identity, LICENSE, icon, README/CHANGELOG, engines/types alignment,
    vsce, lockfile/ignores, CI (GitHub Actions: lint, check-types, test under xvfb, `vsce package`).
+   *Shipped.* As built:
+   - Publisher `nicoaravena` is kept. `docs/RELEASING.md` has the publisher checklist and the manual
+     release steps. Web upload is the recommended path, and it needs no PAT.
+   - `.vscodeignore` ignores `out/**` and re-includes only `out/extension.js` and `out/webview.js`,
+     because tsc also emits tests and unbundled modules into `out/`. CI diffs `vsce ls` against
+     `.github/expected-vsix-files.txt`, so any new or missing packaged file fails the build.
+   - `vscode:prepublish` runs the production build (minified, no source maps).
+   - `src/test/unit/manifest.test.ts` guards release invariants: types vs engines, category,
+     keywords, a 128x128 PNG icon, version vs CHANGELOG, and pnpm only.
+   - `THIRD_PARTY_NOTICES.md` ships in the package. OSMD's build bundles VexFlow, JSZip (used
+     under MIT), pako, lie, immediate, setimmediate and typescript-collections. esbuild keeps only a
+     pointer to OSMD's license file, which would not otherwise ship.
+   - `@vscode/vsce-sign`'s install script is denied in `pnpm-workspace.yaml`. Only `vsce publish`
+     needs it.
+   - CI tests VS Code `1.140.0` and `stable` (`VSCODE_TEST_VERSION`, read by `.vscode-test.mjs`).
+     Actions are pinned to commit SHAs.
+   - The icon is supplied by the user. The README screenshot is deferred to a follow-up.
 
 ## Verification
 

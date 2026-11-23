@@ -2,12 +2,22 @@
   "name": "musicxml-preview",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.140.0"
   },
   "categories": [
-    "Other"
+    "Visualization"
+  ],
+  "keywords": [
+    "musicxml",
+    "mxl",
+    "sheet music",
+    "score",
+    "notation",
+    "music",
+    "osmd",
+    "preview"
   ],
   "activationEvents": [
     "onLanguage:xml"
@@ -18,8 +28,14 @@
     "type": "git",
     "url": "https://github.com/nicoaravena/musicxml-preview"
   },
+  "bugs": {
+    "url": "https://github.com/nicoaravena/musicxml-preview/issues"
+  },
+  "homepage": "https://github.com/nicoaravena/musicxml-preview#readme",
   "publisher": "nicoaravena",
   "license": "MIT",
+  "icon": "images/icon.png",
+  "packageManager": "pnpm@12.21.0",
   "contributes": {
     "languages": [
       {
@@ -65,9 +81,10 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "pnpm run compile",
+    "vscode:prepublish": "pnpm run package",
     "compile": "pnpm run check-types && pnpm run lint && tsc -p ./ && node esbuild.js",
     "package": "pnpm run check-types && pnpm run lint && node esbuild.js --production",
+    "package:vsix": "vsce package --no-dependencies",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src",
     "check-types": "tsc --noEmit && tsc --noEmit -p src/webview",
@@ -75,15 +92,16 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "20.x",
+    "@types/node": "~20.19.43",
     "@types/vscode": "~1.140.0",
-    "@typescript-eslint/eslint-plugin": "^8.31.1",
-    "@typescript-eslint/parser": "^8.31.1",
+    "@typescript-eslint/eslint-plugin": "^8.73.0",
+    "@typescript-eslint/parser": "^8.73.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.25.12",
-    "eslint": "^9.25.1",
-    "typescript": "^5.8.3"
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "opensheetmusicdisplay": "3.0.0"

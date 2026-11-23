@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+category: Media
+tags: [program, syntax, develop, script, compose, algorithm, digital, sequence, notation, process]
+version: "2.28"
+unicode: "fbd8"
+-->
+
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   fill="none"
+   stroke="currentColor"
+   stroke-width="2"
+   stroke-linecap="round"
+   stroke-linejoin="round"
+   version="1.1"
+   id="svg5"
+   sodipodi:docname="icon.svg"
+   inkscape:export-filename="icon.png"
+   inkscape:export-xdpi="784"
+   inkscape:export-ydpi="784"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs5" />
+  <sodipodi:namedview
+     id="namedview5"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="true"
+     inkscape:zoom="22.627417"
+     inkscape:cx="14.473592"
+     inkscape:cy="14.341009"
+     inkscape:window-width="1920"
+     inkscape:window-height="1008"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg5">
+    <inkscape:grid
+       id="grid5"
+       units="px"
+       originx="0"
+       originy="0"
+       spacingx="1"
+       spacingy="1"
+       empcolor="#0099e5"
+       empopacity="0.30196078"
+       color="#0099e5"
+       opacity="0.14901961"
+       empspacing="5"
+       enabled="true"
+       visible="true" />
+  </sodipodi:namedview>
+  <path
+     d="m 2.0277282,17 a 3,3 0 1 0 6,0 3,3 0 0 0 -6,0"
+     id="path1" />
+  <path
+     d="M 8.0277282,17 V 4 h 9.9999998 v 9"
+     id="path2" />
+  <path
+     d="M 8.0277282,8 H 18.027728"
+     id="path3" />
+  <path
+     d="m 20.006551,19.552758 2,-2 -2,-2"
+     id="path4" />
+  <path
+     d="m 14.015014,15.53684 -2,2 2,2"
+     id="path5" />
+  <path
+     d="m 15.811625,20.200834 2.404978,-5.38385"
+     id="path4-3"
+     style="stroke-width:1.6044"
+     inkscape:transform-center-x="0.27476818"
+     inkscape:transform-center-y="-0.031065769"
+     inkscape:label="path6" />
+</svg>

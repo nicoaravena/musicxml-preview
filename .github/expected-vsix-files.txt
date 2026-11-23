@@ -1,0 +1,11 @@
+CHANGELOG.md
+LICENSE
+README.md
+THIRD_PARTY_NOTICES.md
+images/icon.png
+l10n/bundle.l10n.ja.json
+out/extension.js
+out/webview.js
+package.json
+package.nls.ja.json
+package.nls.json

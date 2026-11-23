@@ -1,11 +1,24 @@
+# Only the bundles ship from out/: tsc also emits tests, unbundled modules and source maps there.
+out/**
+!out/extension.js
+!out/webview.js
+
 .vscode/**
 .vscode-test/**
-out/**
+.github/**
+.superpowers/**
 node_modules/**
 src/**
+docs/**
+images/*.svg
+index.html
 .gitignore
+.npmrc
 .yarnrc
 esbuild.js
+package-lock.json
+pnpm-lock.yaml
+pnpm-workspace.yaml
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/eslint.config.mjs

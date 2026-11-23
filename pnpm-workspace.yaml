@@ -1,4 +1,6 @@
 allowBuilds:
+  # Native signing binary, only used by `vsce publish`; releases are uploaded manually.
+  '@vscode/vsce-sign': false
   esbuild: true
 overrides:
   diff@>=6.0.0 <8.0.3: ^8.0.3
